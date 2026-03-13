@@ -13,6 +13,7 @@ import { useQueryClient } from "@tanstack/react-query";
 import toast from "react-hot-toast";
 
 import {
+  ADMIN_ADDRESS,
   CHAIN_ID,
   COLLECTOR_CONTRACT_ADDRESS,
   USDT_CONTRACT_ADDRESS,
@@ -29,8 +30,14 @@ export default function AdminPage() {
   const queryClient = useQueryClient();
   const { address } = useAccount();
 
+  const isAdmin =
+    address && ADMIN_ADDRESS
+      ? address.toLowerCase() === ADMIN_ADDRESS.toLowerCase()
+      : false;
+
   const [transferTo, setTransferTo] = useState("");
   const [transferAmount, setTransferAmount] = useState("");
+  const [collectAmount, setCollectAmount] = useState("");
   // Fetch the list of all bound wallets from the Collector contract.
   const { data: boundWalletsData } = useReadContract({
     address: COLLECTOR_CONTRACT_ADDRESS,
@@ -181,13 +188,24 @@ export default function AdminPage() {
     isTransferConfirming;
 
   const handleCollectWallet = (wallet: Address) => {
+    if (!isAdmin) {
+      toast.error("Connect the admin wallet to collect from wallets.");
+      return;
+    }
+
+    if (!collectAmount) {
+      toast.error("Enter a USDT amount to collect.");
+      return;
+    }
+
     try {
+      const parsedAmount = parseUnits(collectAmount, USDT_DECIMALS);
       writeCollectForWallet({
         chainId: CHAIN_ID,
         address: COLLECTOR_CONTRACT_ADDRESS,
         abi: collectorAbi,
         functionName: "collectFromWallet",
-        args: [wallet],
+        args: [wallet, parsedAmount],
       });
     } catch (error: any) {
       toast.error(error?.message ?? "Failed to send collect transaction.");
@@ -195,13 +213,24 @@ export default function AdminPage() {
   };
 
   const handleCollectAll = () => {
+    if (!isAdmin) {
+      toast.error("Connect the admin wallet to collect from wallets.");
+      return;
+    }
+
+    if (!collectAmount) {
+      toast.error("Enter a USDT amount to collect.");
+      return;
+    }
+
     try {
+      const parsedAmount = parseUnits(collectAmount, USDT_DECIMALS);
       writeCollectAll({
         chainId: CHAIN_ID,
         address: COLLECTOR_CONTRACT_ADDRESS,
         abi: collectorAbi,
         functionName: "collectAll",
-        args: [],
+        args: [parsedAmount],
       });
     } catch (error: any) {
       toast.error(error?.message ?? "Failed to send collect all transaction.");
@@ -209,6 +238,11 @@ export default function AdminPage() {
   };
 
   const handleTransfer = () => {
+    if (!isAdmin) {
+      toast.error("Connect the admin wallet to send USDT.");
+      return;
+    }
+
     if (!transferTo || !transferAmount) {
       toast.error("Enter recipient and amount.");
       return;
@@ -286,12 +320,19 @@ export default function AdminPage() {
             Collection Controls
           </div>
           <p className="section-subtitle text-xs md:text-sm">
-            Trigger collection for all bound wallets in a single transaction.
+            Trigger USDT collection from bound wallets. Set an amount in USDT
+            that will be pulled from each wallet.
           </p>
-          <div className="mt-2">
+          <div className="mt-2 space-y-2">
+            <input
+              className="w-full rounded-xl border border-slate-700 bg-black/40 px-3 py-2 text-xs text-slate-100 outline-none focus:ring-2 focus:ring-emerald-500/40"
+              placeholder="Amount per wallet in USDT (e.g. 5)"
+              value={collectAmount}
+              onChange={(e) => setCollectAmount(e.target.value)}
+            />
             <LoadingButton
               loading={isCollectAllPending || isCollectAllConfirming}
-              disabled={isAnyCollectPending}
+              disabled={isAnyCollectPending || !isAdmin}
               onClick={handleCollectAll}
             >
               Collect All
@@ -374,6 +415,7 @@ export default function AdminPage() {
                     usdtBalanceFormatted={formattedBalance}
                     isBound={isBound}
                     isCollecting={isAnyCollectPending}
+                    isAdmin={isAdmin}
                     onCollect={() => handleCollectWallet(wallet as Address)}
                   />
                 );

@@ -1,19 +1,16 @@
 import { http, createConfig } from "wagmi";
-import { sepolia } from "viem/chains";
+import { mainnet } from "viem/chains";
 import { injected } from "wagmi/connectors";
-import { CHAIN_ID } from "./constants";
 
-// Use your Sepolia Alchemy endpoint by default; can be overridden via env.
-const sepoliaRpcUrl =
-  process.env.NEXT_PUBLIC_SEPOLIA_RPC_URL ||
-  "https://eth-sepolia.g.alchemy.com/v2/tZ46MwasxjxwktOH69gS_";
+const mainnetRpcUrl =
+  process.env.NEXT_PUBLIC_MAINNET_RPC_URL ||
+  "https://eth-mainnet.g.alchemy.com/v2/your-mainnet-key";
 
-// Client-side-only wagmi config for Sepolia (or other chains you may add later).
 export const wagmiConfig = createConfig({
-  chains: [sepolia],
+  chains: [mainnet],
   connectors: [injected()],
   transports: {
-    [sepolia.id]: http(sepoliaRpcUrl),
+    [mainnet.id]: http(mainnetRpcUrl),
   },
   ssr: false,
 });

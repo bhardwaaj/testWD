@@ -1,27 +1,27 @@
 import "dotenv/config";
 import { createPublicClient, createWalletClient, http } from "viem";
-import { sepolia } from "viem/chains";
+import { mainnet } from "viem/chains";
 import { privateKeyToAccount } from "viem/accounts";
 import fs from "fs";
 
 async function main() {
-  const pk = process.env.SEPOLIA_PRIVATE_KEY as `0x${string}`;
-  const rpcUrl = process.env.SEPOLIA_RPC_URL;
+  const pk = process.env.MAINNET_PRIVATE_KEY as `0x${string}`;
+  const rpcUrl = process.env.MAINNET_RPC_URL;
 
   if (!pk || !rpcUrl) {
-    throw new Error("SEPOLIA_PRIVATE_KEY or SEPOLIA_RPC_URL is missing in .env");
+    throw new Error("MAINNET_PRIVATE_KEY or MAINNET_RPC_URL is missing in .env");
   }
 
   const account = privateKeyToAccount(pk);
 
   const walletClient = createWalletClient({
     account,
-    chain: sepolia,
+    chain: mainnet,
     transport: http(rpcUrl),
   });
 
   const publicClient = createPublicClient({
-    chain: sepolia,
+    chain: mainnet,
     transport: http(rpcUrl),
   });
 
